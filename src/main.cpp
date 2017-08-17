@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
   }
 
   // Display timings
-  list_timings(TimingClear::clear, {TimingType::wall});
+  list_timings(TimingClear::keep, {TimingType::wall});
 
   // Report number of Krylov iterations
   if (dolfin::MPI::rank(mesh->mpi_comm()) == 0)
@@ -150,14 +150,17 @@ int main(int argc, char *argv[])
   node.append_attribute("system_name") = system_name.c_str();
   node.append_attribute("num_processes") = (int)num_processes;
   node.append_attribute("problem_type") = problem_type.c_str();
-  node.append_attribute("pc") = preconditioner.c_str();
   // FIXME: 64-bit overflow
   node.append_attribute("totaldofs") = (int)u->function_space()->dim();
+  auto subnode = node.append_child("solver");
+  subnode.append_attribute("pc") = preconditioner.c_str();
+  subnode.append_attribute("iteration_count") = (int)num_iter;
 
   Table t = timings(TimingClear::clear,
     { TimingType::wall, TimingType::user, TimingType::system });
   Table t_max = MPI::max(mesh->mpi_comm(), t);
-  XMLTable::write(t_max, node);
+
+  XMLTable::write(t, node);
 
   // FIXME: output filename
   std::string xml_filename = "output.xml";

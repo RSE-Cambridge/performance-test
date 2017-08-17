@@ -54,11 +54,11 @@ namespace poisson
     std::shared_ptr<dolfin::Function>>
     problem(std::shared_ptr<const dolfin::Mesh> mesh)
   {
-    dolfin::Timer t0("ZZZ FunctionSpace");
+    dolfin::Timer t0("[PERFORMANCE] FunctionSpace");
     auto V = std::make_shared<Poisson::FunctionSpace>(mesh);
     t0.stop();
 
-    dolfin::Timer t1("ZZZ Assemble");
+    dolfin::Timer t1("[PERFORMANCE] Assemble");
 
     // Define boundary condition
     auto u0 = std::make_shared<dolfin::Constant>(0.0);

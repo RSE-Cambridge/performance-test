@@ -152,14 +152,18 @@ int main(int argc, char *argv[])
   node.append_attribute("problem_type") = problem_type.c_str();
   // FIXME: 64-bit overflow
   node.append_attribute("totaldofs") = (int)u->function_space()->dim();
-  auto subnode = node.append_child("solver");
-  subnode.append_attribute("pc") = preconditioner.c_str();
-  subnode.append_attribute("iteration_count") = (int)num_iter;
+  auto solver_subnode = node.append_child("solver");
+  solver_subnode.append_attribute("pc") = preconditioner.c_str();
+  solver_subnode.append_attribute("iteration_count") = (int)num_iter;
+  auto dolfin_subnode = node.append_child("dolfin");
+  std::vector<char> petsc_version(1000);
+  PetscGetVersion(petsc_version.data(), 1000);
+  dolfin_subnode.append_attribute("petsc_version") = petsc_version.data();
+  dolfin_subnode.append_attribute("dolfin_version") = dolfin_version().c_str();
+  dolfin_subnode.append_attribute("git_commit") = git_commit_hash().c_str();
 
-  Table t = timings(TimingClear::clear,
-    { TimingType::wall, TimingType::user, TimingType::system });
+  Table t = timings(TimingClear::clear, {TimingType::wall});
   Table t_max = MPI::max(mesh->mpi_comm(), t);
-
   XMLTable::write(t, node);
 
   // FIXME: output filename

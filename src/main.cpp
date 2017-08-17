@@ -5,6 +5,8 @@
 #include <set>
 #include <string>
 #include <dolfin.h>
+#include <dolfin/io/XMLTable.h>
+#include "pugixml.hpp"
 #include "poisson_problem.h"
 #include "elasticity_problem.h"
 #include "mesh.h"
@@ -33,6 +35,7 @@ int main(int argc, char *argv[])
   application_parameters.add("ndofs", 640);
   application_parameters.add("output", false);
   application_parameters.add("output_dir", "./out");
+  application_parameters.add("system_name", "unknown");
 
   // Update from command line
   application_parameters.parse(argc, argv);
@@ -44,6 +47,7 @@ int main(int argc, char *argv[])
   const std::size_t ndofs = application_parameters["ndofs"];
   const bool output = application_parameters["output"];
   const std::string output_dir = application_parameters["output_dir"];
+  const std::string system_name = application_parameters["system_name"];
 
   // Set mesh partitioner
   parameters["mesh_partitioner"] = "SCOTCH";
@@ -69,7 +73,7 @@ int main(int argc, char *argv[])
   std::shared_ptr<const dolfin::Mesh> mesh;
   if (problem_type == "poisson")
   {
-    Timer t0("ZZZ Create Mesh");
+    Timer t0("[PERFORMANCE] Create Mesh");
     mesh = create_mesh(MPI_COMM_WORLD, ndofs, strong_scaling, 1);
     t0.stop();
 
@@ -81,7 +85,7 @@ int main(int argc, char *argv[])
   }
   else if (problem_type == "elasticity")
   {
-    Timer t0("ZZZ Create Mesh");
+    Timer t0("[PERFORMANCE] Create Mesh");
     mesh = create_mesh(MPI_COMM_WORLD, ndofs, strong_scaling, 3);
     t0.stop();
 
@@ -116,13 +120,13 @@ int main(int argc, char *argv[])
   solver.set_operator(A);
 
   // Solve
-  Timer t5("ZZZ Solve");
+  Timer t5("[PERFORMANCE] Solve");
   std::size_t num_iter = solver.solve(*u->vector(), *b);
   t5.stop();
 
   if (output)
   {
-    Timer t6("ZZZ Output");
+    Timer t6("[PERFORMANCE] Output");
     //  Save solution in XDMF format
     std::string filename = output_dir + "/solution-" + std::to_string(num_processes) + ".xdmf";
     XDMFFile file(filename);
@@ -136,6 +140,30 @@ int main(int argc, char *argv[])
   // Report number of Krylov iterations
   if (dolfin::MPI::rank(mesh->mpi_comm()) == 0)
     std::cout << "*** Number of Krylov iterations: " << num_iter << std::endl;
+
+  // FIXME: pugi::xml is included separately from DOLFIN here, because it is not
+  // installed by DOLFIN at present. Need to be able to access nodes to add more
+  // data
+  pugi::xml_document doc;
+
+  auto node = doc.append_child("bench");
+  node.append_attribute("system_name") = system_name.c_str();
+  node.append_attribute("num_processes") = (int)num_processes;
+  node.append_attribute("problem_type") = problem_type.c_str();
+  node.append_attribute("pc") = preconditioner.c_str();
+  // FIXME: 64-bit overflow
+  node.append_attribute("totaldofs") = (int)u->function_space()->dim();
+
+  Table t = timings(TimingClear::clear,
+    { TimingType::wall, TimingType::user, TimingType::system });
+  Table t_max = MPI::max(mesh->mpi_comm(), t);
+  XMLTable::write(t_max, node);
+
+  // FIXME: output filename
+  std::string xml_filename = "output.xml";
+
+  if (MPI::rank(mesh->mpi_comm()) == 0)
+    doc.save_file(xml_filename.c_str(), "  ");
 
   return 0;
 }

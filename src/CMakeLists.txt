@@ -11,7 +11,7 @@ include(${DOLFIN_USE_FILE})
 set(CMAKE_BUILD_TYPE "Release")
 
 # Executable
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp pugixml.cpp)
 
 # Target libraries
 target_link_libraries(${PROJECT_NAME} dolfin)

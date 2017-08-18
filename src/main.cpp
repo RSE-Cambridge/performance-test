@@ -4,7 +4,15 @@
 
 #include <set>
 #include <string>
+
+#include<boost/property_tree/ptree.hpp>
+#include<boost/property_tree/json_parser.hpp>
+#include<boost/property_tree/xml_parser.hpp>
+
+namespace pt = boost::property_tree;
+
 #include <dolfin.h>
+#include <dolfin/io/XMLTable.h>
 #include "poisson_problem.h"
 #include "elasticity_problem.h"
 #include "mesh.h"
@@ -69,7 +77,7 @@ int main(int argc, char *argv[])
   std::shared_ptr<const dolfin::Mesh> mesh;
   if (problem_type == "poisson")
   {
-    Timer t0("ZZZ Create Mesh");
+    Timer t0("[PERFORMANCE] Create Mesh");
     mesh = create_mesh(MPI_COMM_WORLD, ndofs, strong_scaling, 1);
     t0.stop();
 
@@ -81,7 +89,7 @@ int main(int argc, char *argv[])
   }
   else if (problem_type == "elasticity")
   {
-    Timer t0("ZZZ Create Mesh");
+    Timer t0("[PERFORMANCE] Create Mesh");
     mesh = create_mesh(MPI_COMM_WORLD, ndofs, strong_scaling, 3);
     t0.stop();
 
@@ -116,13 +124,13 @@ int main(int argc, char *argv[])
   solver.set_operator(A);
 
   // Solve
-  Timer t5("ZZZ Solve");
+  Timer t5("[PERFORMANCE] Solve");
   std::size_t num_iter = solver.solve(*u->vector(), *b);
   t5.stop();
 
   if (output)
   {
-    Timer t6("ZZZ Output");
+    Timer t6("[PERFORMANCE] Output");
     //  Save solution in XDMF format
     std::string filename = output_dir + "/solution-" + std::to_string(num_processes) + ".xdmf";
     XDMFFile file(filename);
@@ -131,11 +139,19 @@ int main(int argc, char *argv[])
   }
 
   // Display timings
-  list_timings(TimingClear::clear, {TimingType::wall});
+  list_timings(TimingClear::keep, {TimingType::wall});
 
   // Report number of Krylov iterations
   if (dolfin::MPI::rank(mesh->mpi_comm()) == 0)
     std::cout << "*** Number of Krylov iterations: " << num_iter << std::endl;
+
+  std::stringstream xml;
+  xml << XMLTable::str(timings(TimingClear::keep, {TimingType::wall}));
+
+  pt::ptree ptree;
+  pt::read_xml(xml, ptree, pt::xml_parser::trim_whitespace);
+  const std::string json="a.json";
+  pt::write_json(json, ptree);
 
   return 0;
 }

@@ -168,11 +168,14 @@ int main(int argc, char *argv[])
   PetscGetVersion(petsc_version, 200);
   ptree.put("benchmark.dolfin.petsc_version", petsc_version);
 
-  std::stringstream json;
-  json << "-----------------------------------------------------------------------------" << std::endl;
-  pt::write_json(json, ptree);
-  json << "-----------------------------------------------------------------------------" << std::endl;
-  std::cout << json.str();
+  if (MPI::rank(mesh->mpi_comm()) == 0)
+  {
+    std::stringstream json;
+    json << "-----------------------------------------------------------------------------" << std::endl;
+    pt::write_json(json, ptree);
+    json << "-----------------------------------------------------------------------------" << std::endl;
+    std::cout << json.str();
+  }
 
   return 0;
 }

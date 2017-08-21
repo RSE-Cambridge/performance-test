@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
   application_parameters.add("ndofs", 640);
   application_parameters.add("output", false);
   application_parameters.add("output_dir", "./out");
+  application_parameters.add("system_name", "unknown");
 
   // Update from command line
   application_parameters.parse(argc, argv);
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
   const std::size_t ndofs = application_parameters["ndofs"];
   const bool output = application_parameters["output"];
   const std::string output_dir = application_parameters["output_dir"];
+  const std::string system_name = application_parameters["system_name"];
 
   // Set mesh partitioner
   parameters["mesh_partitioner"] = "SCOTCH";
@@ -145,13 +147,32 @@ int main(int argc, char *argv[])
   if (dolfin::MPI::rank(mesh->mpi_comm()) == 0)
     std::cout << "*** Number of Krylov iterations: " << num_iter << std::endl;
 
-  std::stringstream xml;
-  xml << XMLTable::str(timings(TimingClear::keep, {TimingType::wall}));
-
+  // Get timings and insert into boost::property_tree
+  Table t = timings(TimingClear::keep, {TimingType::wall});
   pt::ptree ptree;
-  pt::read_xml(xml, ptree, pt::xml_parser::trim_whitespace);
-  const std::string json="a.json";
+  ptree.put("benchmark.system.name", system_name);
+  ptree.put("benchmark.system.num_processes", num_processes);
+  ptree.put("benchmark.problem.type", problem_type);
+  ptree.put("benchmark.problem.total_dofs", u->function_space()->dim());
+  ptree.put("benchmark.problem.preconditioner", preconditioner);
+  ptree.put("benchmark.results.solve", t.get_value("[PERFORMANCE] Solve","wall avg"));
+  ptree.put("benchmark.results.assemble", t.get_value("[PERFORMANCE] Assemble","wall avg"));
+  ptree.put("benchmark.results.create_mesh", t.get_value("[PERFORMANCE] Create Mesh","wall avg"));
+  ptree.put("benchmark.results.functionspace", t.get_value("[PERFORMANCE] FunctionSpace","wall avg"));
+  if (output)
+    ptree.put("benchmark.results.output", t.get_value("[PERFORMANCE] Output","wall avg"));
+  ptree.put("benchmark.results.num_iter", num_iter);
+  ptree.put("benchmark.dolfin.version", dolfin_version());
+  ptree.put("benchmark.dolfin.commit", git_commit_hash());
+  char petsc_version[200];
+  PetscGetVersion(petsc_version, 200);
+  ptree.put("benchmark.dolfin.petsc_version", petsc_version);
+
+  std::stringstream json;
+  json << "-----------------------------------------------------------------------------" << std::endl;
   pt::write_json(json, ptree);
+  json << "-----------------------------------------------------------------------------" << std::endl;
+  std::cout << json.str();
 
   return 0;
 }

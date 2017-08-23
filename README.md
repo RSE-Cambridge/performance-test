@@ -76,6 +76,7 @@ mpirun -np 8 ./dolfin-scaling-test \
 --petsc.ksp_view \
 --petsc.ksp_type cg \
 --petsc.ksp_rtol 1.0e-8 \
+--petsc.ksp_monitor_true_residual \
 --petsc.pc_type gamg \
 --petsc.pc_gamg_coarse_eq_limit 1000 \
 --petsc.mg_levels_ksp_type chebyshev \
@@ -98,6 +99,7 @@ mpirun -np 8 ./dolfin-scaling-test \
 --petsc.ksp_view \
 --petsc.ksp_type cg \
 --petsc.ksp_rtol 1.0e-8 \
+--petsc.ksp_monitor_true_residual \
 --petsc.pc_type gamg \
 --petsc.pc_gamg_coarse_eq_limit 1000 \
 --petsc.mg_levels_ksp_type chebyshev \
@@ -123,6 +125,7 @@ mpirun -np 8 ./dolfin-scaling-test \
 --petsc.ksp_view \
 --petsc.ksp_type cg \
 --petsc.ksp_rtol 1.0e-8 \
+--petsc.ksp_monitor_true_residual \
 --petsc.pc_type hypre \
 --petsc.pc_hypre_type boomeramg \
 --petsc.pc_hypre_boomeramg_strong_threshold 0.5 \
@@ -139,6 +142,7 @@ mpirun -np 8 ./dolfin-scaling-test \
 --petsc.ksp_view \
 --petsc.ksp_type cg \
 --petsc.ksp_rtol 1.0e-8 \
+--petsc.ksp_monitor_true_residual \
 --petsc.pc_type hypre \
 --petsc.pc_hypre_type boomeramg \
 --petsc.pc_hypre_boomeramg_strong_threshold 0.5 \

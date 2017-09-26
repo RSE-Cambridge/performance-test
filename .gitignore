@@ -1,0 +1,17 @@
+# ignore compiled header files
+/src/Elasticity.h
+/src/Poisson.h
+
+# ignore dolfin-scaling-test binary and outputs
+/src/dolfin-scaling-test
+/src/core
+/src/out
+
+
+# ignore cmake build
+/src/CMakeFiles
+/src/cmake_install.cmake
+/src/CMakeCache.txt
+
+# Makekfile can be part of this repo later on, this may cause issues
+/src/Makefile

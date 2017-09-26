@@ -69,6 +69,8 @@ int main(int argc, char *argv[])
     strong_scaling = true;
   }
 
+  Timer whole_program("[PERFORMANCE] Whole Application");
+
   // Get number of processes
   const std::size_t num_processes = dolfin::MPI::size(MPI_COMM_WORLD);
 
@@ -139,6 +141,7 @@ int main(int argc, char *argv[])
     file.write(*u);
     t6.stop();
   }
+  whole_program.stop();
 
   // Display timings
   list_timings(TimingClear::keep, {TimingType::wall});
@@ -149,27 +152,70 @@ int main(int argc, char *argv[])
 
   // Get timings and insert into boost::property_tree
   Table t = timings(TimingClear::keep, {TimingType::wall});
-  pt::ptree ptree;
-  ptree.put("benchmark.system.name", system_name);
-  ptree.put("benchmark.system.num_processes", num_processes);
-  ptree.put("benchmark.problem.type", problem_type);
-  ptree.put("benchmark.problem.total_dofs", u->function_space()->dim());
-  ptree.put("benchmark.problem.preconditioner", preconditioner);
-  ptree.put("benchmark.results.solve", t.get_value("[PERFORMANCE] Solve","wall avg"));
-  ptree.put("benchmark.results.assemble", t.get_value("[PERFORMANCE] Assemble","wall avg"));
-  ptree.put("benchmark.results.create_mesh", t.get_value("[PERFORMANCE] Create Mesh","wall avg"));
-  ptree.put("benchmark.results.functionspace", t.get_value("[PERFORMANCE] FunctionSpace","wall avg"));
-  if (output)
-    ptree.put("benchmark.results.output", t.get_value("[PERFORMANCE] Output","wall avg"));
-  ptree.put("benchmark.results.num_iter", num_iter);
-  ptree.put("benchmark.dolfin.version", dolfin_version());
-  ptree.put("benchmark.dolfin.commit", git_commit_hash());
-  char petsc_version[200];
-  PetscGetVersion(petsc_version, 200);
-  ptree.put("benchmark.dolfin.petsc_version", petsc_version);
+  Table t_max = dolfin::MPI::all_reduce(mesh->mpi_comm(), t, MPI_MAX);
+  Table t_min = dolfin::MPI::all_reduce(mesh->mpi_comm(), t, MPI_MIN);
 
+  // limit output to rank 0 only
   if (MPI::rank(mesh->mpi_comm()) == 0)
   {
+    pt::ptree ptree, timers, libs, dolfin, petsc;
+
+    // system information
+    ptree.put("system.name",          system_name);
+    ptree.put("system.num_processes", num_processes);
+    ptree.put("system.hostname",      std::getenv("HOSTNAME"));
+    // problem information
+    ptree.put("problem.application",  "dolfin");
+    ptree.put("problem.type",         problem_type);
+    ptree.put("problem.total_dofs",   u->function_space()->dim());
+    ptree.put("problem.preconditioner", preconditioner);
+    // results of test
+    ptree.put("results.num_iter",     num_iter);
+    ptree.put("results.wall_avg",     t.get_value("[PERFORMANCE] Whole Application", "wall avg"));
+    ptree.put("results.wall_max",     t_max.get_value("[PERFORMANCE] Whole Application", "wall avg"));
+    ptree.put("results.wall_min",     t_min.get_value("[PERFORMANCE] Whole Application", "wall avg"));
+
+    // save all [PERFORMANCE] timers
+    // TODO: later on, this could be done using Table.rows fields
+    // but it is private for now
+    std::vector<std::string> performance_rows {
+      "[PERFORMANCE] Whole Application",
+      "[PERFORMANCE] Solve",
+      "[PERFORMANCE] Assemble",
+      "[PERFORMANCE] Create Mesh",
+      "[PERFORMANCE] FunctionSpace",
+    };
+    if (output)
+      performance_rows.push_back("[PERFORMANCE] Output");
+
+    for (size_t i = 0; i < performance_rows.size(); i++)
+    {
+      pt::ptree result;
+      result.put("name",      performance_rows[i]);
+      result.put("wall_avg",  t.get_value(performance_rows[i], "wall avg"));
+      result.put("wall_max",  t_max.get_value(performance_rows[i], "wall avg"));
+      result.put("wall_min",  t_min.get_value(performance_rows[i], "wall avg"));
+      // add to list of timers
+      timers.push_back(std::make_pair("", result));
+    }
+
+    // add info about dolfin
+    dolfin.put("name", "dolfin");
+    dolfin.put("version", dolfin_version());
+    dolfin.put("commit",  git_commit_hash());
+    libs.push_back(std::make_pair("", dolfin));
+
+    // add info about petsc
+    char petsc_version[200];
+    PetscGetVersion(petsc_version, 200);
+    petsc.put("name", "petsc");
+    petsc.put("version", petsc_version);
+    libs.push_back(std::make_pair("", petsc));
+
+    // add lists to tree
+    ptree.add_child("timers", timers);
+    ptree.add_child("libs",   libs);
+
     std::stringstream json;
     json << "-----------------------------------------------------------------------------" << std::endl;
     pt::write_json(json, ptree);

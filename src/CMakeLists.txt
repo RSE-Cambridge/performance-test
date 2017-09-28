@@ -3,6 +3,13 @@ cmake_minimum_required(VERSION 3.5)
 set(PROJECT_NAME dolfin-scaling-test)
 project(${PROJECT_NAME})
 
+# add HPCReport lib
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories(hpcreport)
+add_library(hpcreportlib hpcreport/HPCReport.cpp)
+target_link_libraries(hpcreportlib ${Boost_LIBRARIES})
+
 # Get DOLFIN configuration data (DOLFINConfig.cmake must be in
 # DOLFIN_CMAKE_CONFIG_PATH)
 find_package(DOLFIN REQUIRED)
@@ -14,4 +21,4 @@ set(CMAKE_BUILD_TYPE "Release")
 add_executable(${PROJECT_NAME} main.cpp)
 
 # Target libraries
-target_link_libraries(${PROJECT_NAME} dolfin)
+target_link_libraries(${PROJECT_NAME} hpcreportlib dolfin)

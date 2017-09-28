@@ -7,11 +7,16 @@
 /src/core
 /src/out
 
+# ignore .idea configuration dir
+**/.idea
+
+# ignore .a lib
+/src/libhpcreportlib.a
 
 # ignore cmake build
-/src/CMakeFiles
-/src/cmake_install.cmake
-/src/CMakeCache.txt
+**/CMakeFiles
+**/cmake_install.cmake
+**/CMakeCache.txt
 
 # Makekfile can be part of this repo later on, this may cause issues
 /src/Makefile

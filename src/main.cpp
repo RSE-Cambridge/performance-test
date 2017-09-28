@@ -5,17 +5,13 @@
 #include <set>
 #include <string>
 
-#include<boost/property_tree/ptree.hpp>
-#include<boost/property_tree/json_parser.hpp>
-#include<boost/property_tree/xml_parser.hpp>
-
-namespace pt = boost::property_tree;
-
 #include <dolfin.h>
 #include <dolfin/io/XMLTable.h>
 #include "poisson_problem.h"
 #include "elasticity_problem.h"
 #include "mesh.h"
+
+#include "HPCReport.h"
 
 using namespace dolfin;
 
@@ -158,67 +154,57 @@ int main(int argc, char *argv[])
   // limit output to rank 0 only
   if (MPI::rank(mesh->mpi_comm()) == 0)
   {
-    pt::ptree ptree, timers, libs, dolfin, petsc;
-
-    // system information
-    ptree.put("system.name",          system_name);
-    ptree.put("system.num_processes", num_processes);
-    ptree.put("system.hostname",      std::getenv("HOSTNAME"));
-    // problem information
-    ptree.put("problem.application",  "dolfin");
-    ptree.put("problem.type",         problem_type);
-    ptree.put("problem.total_dofs",   u->function_space()->dim());
-    ptree.put("problem.preconditioner", preconditioner);
-    // results of test
-    ptree.put("results.num_iter",     num_iter);
-    ptree.put("results.wall_avg",     t.get_value("[PERFORMANCE] Whole Application", "wall avg"));
-    ptree.put("results.wall_max",     t_max.get_value("[PERFORMANCE] Whole Application", "wall avg"));
-    ptree.put("results.wall_min",     t_min.get_value("[PERFORMANCE] Whole Application", "wall avg"));
-
-    // save all [PERFORMANCE] timers
-    // TODO: later on, this could be done using Table.rows fields
-    // but it is private for now
-    std::vector<std::string> performance_rows {
-      "[PERFORMANCE] Whole Application",
-      "[PERFORMANCE] Solve",
-      "[PERFORMANCE] Assemble",
-      "[PERFORMANCE] Create Mesh",
-      "[PERFORMANCE] FunctionSpace",
+    // for now manually list timers we want to include in report
+    std::vector<std::string> timers{
+        "[PERFORMANCE] Whole Application",    // first timer is used for result section
+        "[PERFORMANCE] Solve",
+        "[PERFORMANCE] Assemble",
+        "[PERFORMANCE] Create Mesh",
+        "[PERFORMANCE] FunctionSpace",
     };
     if (output)
-      performance_rows.push_back("[PERFORMANCE] Output");
+      timers.emplace_back("[PERFORMANCE] Output");
 
-    for (size_t i = 0; i < performance_rows.size(); i++)
-    {
-      pt::ptree result;
-      result.put("name",      performance_rows[i]);
-      result.put("wall_avg",  t.get_value(performance_rows[i], "wall avg"));
-      result.put("wall_max",  t_max.get_value(performance_rows[i], "wall avg"));
-      result.put("wall_min",  t_min.get_value(performance_rows[i], "wall avg"));
-      // add to list of timers
-      timers.push_back(std::make_pair("", result));
-    }
+    // report json file
+    HPCReport report("Dolfin");
+    report.put_problem(HPCREPORT_PROBLEM_TYPE, problem_type)
+        .put_problem(HPCREPORT_PROBLEM_SIZE, u->function_space()->dim())
+        .put_problem("preconditioner", preconditioner);
 
-    // add info about dolfin
-    dolfin.put("name", "dolfin");
-    dolfin.put("version", dolfin_version());
-    dolfin.put("commit",  git_commit_hash());
-    libs.push_back(std::make_pair("", dolfin));
+    // add system info
+    report.put_system(HPCREPORT_SYSTEM_CPUS, num_processes)
+        .put_system(HPCREPORT_SYSTEM_MACHINE, system_name);
 
-    // add info about petsc
+    // add result info
+    report.put_result("num_iter", num_iter)
+        .put_result(HPCREPORT_RESULT_WALL_AVG, t.get_value(timers[0], "wall avg"))
+        .put_result(HPCREPORT_RESULT_WALL_MAX, t_max.get_value(timers[0], "wall avg"))
+        .put_result(HPCREPORT_RESULT_WALL_MIN, t_min.get_value(timers[0], "wall avg"));
+
+    // add dolfin lib and petsc lib
+    report.add_lib("dolfin")
+        .put(HPCREPORT_LIBRARY_VERSION, dolfin_version())
+        .put(HPCREPORT_LIBRARY_COMMIT, git_commit_hash());
+
     char petsc_version[200];
     PetscGetVersion(petsc_version, 200);
-    petsc.put("name", "petsc");
-    petsc.put("version", petsc_version);
-    libs.push_back(std::make_pair("", petsc));
+    report.add_lib("petsc")
+        .put(HPCREPORT_LIBRARY_VERSION, petsc_version);
 
-    // add lists to tree
-    ptree.add_child("timers", timers);
-    ptree.add_child("libs",   libs);
+    // add selected timers info
+    for (auto & timer : timers)
+    {
+      report.add_frame(timer)
+          .put(HPCREPORT_FRAME_WALL_AVG, t.get_value(timer, "wall avg"))
+          .put(HPCREPORT_FRAME_WALL_MAX, t_max.get_value(timer, "wall avg"))
+          .put(HPCREPORT_FRAME_WALL_MIN, t_min.get_value(timer, "wall avg"));
+    }
 
+
+    // generate json file and print it to standard stream
     std::stringstream json;
     json << "-----------------------------------------------------------------------------" << std::endl;
-    pt::write_json(json, ptree);
+    json << report << std::endl;
     json << "-----------------------------------------------------------------------------" << std::endl;
     std::cout << json.str();
   }

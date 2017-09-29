@@ -85,7 +85,7 @@ mpirun -np 8 ./dolfin-scaling-test \
 --petsc.options_left
 ```
 
-For a weak scaling test, with 8 MPI processes and 10M
+For a strong scaling test, with 8 MPI processes and 10M
 degrees-of-freedom in total:
 
 
@@ -153,7 +153,7 @@ in assessing performance on a given system.
 
 ## Test status
 
-The code is tested on CircleCI.  
+The code is tested on CircleCI.
 [![CircleCI](https://circleci.com/bb/fenics-project/performance-tests.svg?style=svg)](https://circleci.com/bb/fenics-project/performance-tests)
 
 ## Authors and license

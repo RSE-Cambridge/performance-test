@@ -3,6 +3,13 @@ cmake_minimum_required(VERSION 3.5)
 set(PROJECT_NAME dolfin-scaling-test)
 project(${PROJECT_NAME})
 
+# Use C++11
+set(CMAKE_CXX_STANDARD 11)
+
+# Require C++11
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+
 # add HPCReport lib
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})

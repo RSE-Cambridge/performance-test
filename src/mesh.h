@@ -48,10 +48,10 @@ create_mesh(MPI_Comm comm, std::size_t target_dofs, bool target_dofs_total,
   std::int64_t nc = 0;
   while (nc < N) {
     ++Nx;
-    if (Nx > 100) {
-      Nx = 40;
-      ++r;
-    }
+    //    if (Nx > 100) {
+    //      Nx = 40;
+    //      ++r;
+    //    }
     nc = nvertices(Nx, Nx, Nx, r);
   }
 

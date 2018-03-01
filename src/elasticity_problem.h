@@ -104,7 +104,7 @@ problem(std::shared_ptr<const dolfin::mesh::Mesh> mesh) {
   dolfin::common::Timer t1("[PERFORMANCE] Assemble");
 
   // Define boundary condition
-  auto u0 = std::make_shared<dolfin::function::Constant>(0.0, 0.0, 0.0);
+  auto u0 = std::make_shared<dolfin::function::Constant>({0.0, 0.0, 0.0});
   auto boundary = std::make_shared<DirichletBoundary>();
   auto bc = std::make_shared<dolfin::fem::DirichletBC>(V, u0, boundary);
 

@@ -36,7 +36,7 @@ build_near_nullspace(const dolfin::function::FunctionSpace &V,
   // Create vectors for nullspace basis
   std::vector<std::shared_ptr<dolfin::la::PETScVector>> basis(6);
   for (std::size_t i = 0; i < basis.size(); ++i)
-    basis[i] = x.copy();
+    basis[i].reset(new dolfin::la::PETScVector(x));
 
   // x0, x1, x2 translations
   V0->dofmap()->set(*basis[0], 1.0);
@@ -104,7 +104,8 @@ problem(std::shared_ptr<const dolfin::mesh::Mesh> mesh) {
   dolfin::common::Timer t1("[PERFORMANCE] Assemble");
 
   // Define boundary condition
-  auto u0 = std::make_shared<dolfin::function::Constant>({0.0, 0.0, 0.0});
+  auto u0 = std::make_shared<dolfin::function::Constant>(
+      std::vector<double>({0.0, 0.0, 0.0}));
   auto boundary = std::make_shared<DirichletBoundary>();
   auto bc = std::make_shared<dolfin::fem::DirichletBC>(V, u0, boundary);
 
@@ -130,8 +131,8 @@ problem(std::shared_ptr<const dolfin::mesh::Mesh> mesh) {
   dolfin::fem::SystemAssembler assembler(a, L, {bc});
 
   // Assemble system
-  auto A = std::make_shared<dolfin::la::PETScMatrix>();
-  auto b = std::make_shared<dolfin::la::PETScVector>();
+  auto A = std::make_shared<dolfin::la::PETScMatrix>(mesh->mpi_comm());
+  auto b = std::make_shared<dolfin::la::PETScVector>(mesh->mpi_comm());
   assembler.assemble(*A, *b);
 
   t1.stop();

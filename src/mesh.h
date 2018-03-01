@@ -6,9 +6,9 @@
 
 #include <memory>
 #include <dolfin/common/MPI.h>
-#include <dolfin/generation/UnitCubeMesh.h>
+#include <dolfin/generation/BoxMesh.h>
 #include <dolfin/mesh/Mesh.h>
-#include <dolfin/refinement/refine.h>
+// #include <dolfin/refinement/refine.h>
 
 namespace
 {
@@ -85,7 +85,7 @@ std::shared_ptr<const dolfin::Mesh> create_mesh(MPI_Comm comm,
     }
   }
 
-  auto mesh = std::make_shared<const dolfin::Mesh>(dolfin::UnitCubeMesh(comm, Nx, Ny, Nz));
+  auto mesh = std::make_shared<const dolfin::Mesh>(dolfin::BoxMesh::create(comm, {Point(0,0,0), Point(1,1,1)}, {Nx, Ny, Nz}));
 
   if (dolfin::MPI::rank(mesh->mpi_comm()) == 0)
   {
@@ -93,8 +93,8 @@ std::shared_ptr<const dolfin::Mesh> create_mesh(MPI_Comm comm,
               << ") to be refined " <<  r <<  " times\n";
   }
 
-  for (unsigned int i = 0; i != r; ++i)
-    mesh = std::make_shared<const dolfin::Mesh>(dolfin::refine(*mesh, false));
+  //  for (unsigned int i = 0; i != r; ++i)
+  //    mesh = std::make_shared<const dolfin::Mesh>(dolfin::refine(*mesh, false));
 
   return mesh;
 }

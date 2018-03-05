@@ -50,9 +50,9 @@ public:
 // Sub domain for Dirichlet boundary condition
 class DirichletBoundary : public dolfin::mesh::SubDomain {
 public:
-  EigenVectorXb inside(Eigen::Ref<const EigenRowMatrixXd> x,
-                       bool on_boundary) const {
-    EigenVectorXb result(x.rows());
+  dolfin::EigenArrayXb inside(Eigen::Ref<const dolfin::EigenRowArrayXXd> x,
+                              bool on_boundary) const {
+    dolfin::EigenArrayXb result(x.rows());
     for (unsigned int i = 0; i != x.rows(); ++i)
       result[i] = (x(i, 0) < DOLFIN_EPS or x(i, 0) > (1.0 - DOLFIN_EPS));
     return result;

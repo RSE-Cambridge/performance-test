@@ -5,6 +5,7 @@
 #pragma once
 
 #include <dolfin/common/Timer.h>
+#include <dolfin/common/types.h>
 #include <dolfin/fem/DirichletBC.h>
 #include <dolfin/fem/SystemAssembler.h>
 #include <dolfin/function/Constant.h>
@@ -84,9 +85,9 @@ public:
 
 // Bottom (x[1] = 0) surface
 class DirichletBoundary : public dolfin::mesh::SubDomain {
-  EigenVectorXb inside(Eigen::Ref<const EigenRowMatrixXd> x,
-                       bool on_boundary) const {
-    EigenVectorXb result(x.rows());
+  dolfin::EigenArrayXb inside(Eigen::Ref<const dolfin::EigenRowArrayXXd> x,
+                              bool on_boundary) const {
+    dolfin::EigenArrayXb result(x.rows());
     for (unsigned int i = 0; i != x.rows(); ++i)
       result[i] = (x(i, 1) < 1.0e-8);
     return result;

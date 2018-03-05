@@ -7,8 +7,8 @@
 #include <dolfin/common/MPI.h>
 #include <dolfin/generation/BoxMesh.h>
 #include <dolfin/mesh/Mesh.h>
+#include <dolfin/refinement/refine.h>
 #include <memory>
-// #include <dolfin/refinement/refine.h>
 
 namespace {
 // Calculate number of vertices for any given level of refinement
@@ -48,10 +48,10 @@ create_mesh(MPI_Comm comm, std::size_t target_dofs, bool target_dofs_total,
   std::int64_t nc = 0;
   while (nc < N) {
     ++Nx;
-    //    if (Nx > 100) {
-    //      Nx = 40;
-    //      ++r;
-    //    }
+    if (Nx > 100) {
+      Nx = 40;
+      ++r;
+    }
     nc = nvertices(Nx, Nx, Nx, r);
   }
 
@@ -86,9 +86,11 @@ create_mesh(MPI_Comm comm, std::size_t target_dofs, bool target_dofs_total,
               << ") to be refined " << r << " times\n";
   }
 
-  //  for (unsigned int i = 0; i != r; ++i)
-  //    mesh = std::make_shared<const dolfin::Mesh>(dolfin::refine(*mesh,
-  //    false));
+  for (unsigned int i = 0; i != r; ++i) {
+    auto new_mesh = std::make_shared<dolfin::mesh::Mesh>(mesh->mpi_comm());
+    dolfin::refinement::refine(*new_mesh, *mesh, false);
+    mesh = new_mesh;
+  }
 
   return mesh;
 }

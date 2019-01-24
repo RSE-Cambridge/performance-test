@@ -8,7 +8,7 @@ jobs:
       - checkout
       - run:
           name: Update FFC
-          command: pip3 install git+https://github.com/FEniCS/ffcx@chris/issue-6  --upgrade
+          command: pip3 install git+https://github.com/FEniCS/ffcx@chris/issue-6 --upgrade
       - run:
           name: Compile UFL files
           command: |
